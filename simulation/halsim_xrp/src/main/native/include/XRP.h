@@ -19,6 +19,7 @@
 #define XRP_TAG_GYRO 0x16
 #define XRP_TAG_ACCEL 0x17
 #define XRP_TAG_ENCODER 0x18
+#define XRP_TAG_DUTYCYCLEENCODER 0x19
 
 namespace wpilibxrp {
 
@@ -58,6 +59,7 @@ class XRP {
   void ReadDIOTag(std::span<const uint8_t> packet);
   void ReadEncoderTag(std::span<const uint8_t> packet);
   void ReadAnalogTag(std::span<const uint8_t> packet);
+  void ReadDutyCycleEncoderTag(std::span<const uint8_t> packet);
 
   // Robot State
   std::map<uint8_t, bool> m_digital_outputs;
@@ -74,6 +76,8 @@ class XRP {
   // Key: XRP encoder number, Value: WPILib channel
   // If no encoders are init-ed, this map is empty
   std::map<uint8_t, uint8_t> m_encoder_channel_map;
+
+  std::map<uint8_t, uint8_t> m_dutycycleencoder_channel_map;
 
   uint16_t m_wpilib_bound_seq = 0;
   uint16_t m_xrp_bound_seq = 0;

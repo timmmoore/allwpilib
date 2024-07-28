@@ -8,6 +8,7 @@
 #include <wpi/Endian.h>
 #include <wpi/MathExtras.h>
 #include <wpi/json.h>
+#include <wpi/print.h>
 
 using namespace wpilibxrp;
 
@@ -18,14 +19,23 @@ XRP::XRP()
   m_motor_outputs.emplace(1, 0.0f);
   m_motor_outputs.emplace(2, 0.0f);
   m_motor_outputs.emplace(3, 0.0f);
+  m_motor_outputs.emplace(4, 0.0f);
+  m_motor_outputs.emplace(5, 0.0f);
+  m_motor_outputs.emplace(6, 0.0f);
+  m_motor_outputs.emplace(7, 0.0f);
 
-  m_servo_outputs.emplace(4, 0.5f);
-  m_servo_outputs.emplace(5, 0.5f);
+  m_servo_outputs.emplace(8, 0.5f);
+  m_servo_outputs.emplace(9, 0.5f);
 
   m_encoder_inputs.emplace(1, 0);
   m_encoder_inputs.emplace(2, 0);
   m_encoder_inputs.emplace(0, 0);
   m_encoder_inputs.emplace(3, 0);
+
+  m_dutycycleencoder_channel_map.emplace(0, 12);
+  m_dutycycleencoder_channel_map.emplace(1, 13);
+  m_dutycycleencoder_channel_map.emplace(2, 14);
+  m_dutycycleencoder_channel_map.emplace(3, 15);
 }
 
 void XRP::HandleWPILibUpdate(const wpi::json& data) {
@@ -45,7 +55,19 @@ void XRP::HandleWPILibUpdate(const wpi::json& data) {
     HandleGyroSimValueChanged(data);
   } else if (data["type"] == "Encoder") {
     HandleEncoderSimValueChanged(data);
+  } else if (data["type"] == "DutyCycle") {
+    //std::string s = data["device"].get<std::string>();
+    //std::string CycleData = data["data"].dump();
+    //wpi::print("XRP DutyCycle {} {}\n", s, CycleData);
   }
+/*
+  else {
+    std::string s = data["type"].get<std::string>();
+    std::string s1 = data["device"].get<std::string>();
+    std::string CycleData = data["data"].dump();
+    wpi::print("XRP HandleUpdate {} {} {}\n", s, s1, CycleData);
+  }
+*/
 }
 
 void XRP::HandleXRPUpdate(std::span<const uint8_t> packet) {
@@ -91,6 +113,9 @@ void XRP::HandleXRPUpdate(std::span<const uint8_t> packet) {
       case XRP_TAG_ANALOG:
         ReadAnalogTag(tagPacket);
         break;
+      case XRP_TAG_DUTYCYCLEENCODER:
+        ReadDutyCycleEncoderTag(tagPacket);
+        break;
     }
 
     packet = packet.subspan(tagLength + 1);
@@ -125,6 +150,14 @@ void XRP::HandleMotorSimValueChanged(const wpi::json& data) {
     deviceId = 2;
   } else if (data["device"] == "motor4") {
     deviceId = 3;
+  } else if (data["device"] == "motor5") {
+    deviceId = 4;
+  } else if (data["device"] == "motor6") {
+    deviceId = 5;
+  } else if (data["device"] == "motor7") {
+    deviceId = 6;
+  } else if (data["device"] == "motor8") {
+    deviceId = 7;
   }
 
   if (deviceId != -1 && motorData.find("<speed") != motorData.end()) {
@@ -137,9 +170,9 @@ void XRP::HandleServoSimValueChanged(const wpi::json& data) {
   auto servoData = data["data"];
 
   if (data["device"] == "servo1") {
-    deviceId = 4;
+    deviceId = 8;
   } else if (data["device"] == "servo2") {
-    deviceId = 5;
+    deviceId = 9;
   }
 
   if (deviceId != -1 && servoData.find("<position") != servoData.end()) {
@@ -362,6 +395,34 @@ void XRP::ReadEncoderTag(std::span<const uint8_t> packet) {
   encJson["type"] = "Encoder";
   encJson["device"] = std::to_string(wpilibEncoderChannel);
   encJson["data"] = {{">count", value}};
+
+  m_wpilib_update_func(encJson);
+}
+
+void XRP::ReadDutyCycleEncoderTag(std::span<const uint8_t> packet) {
+  if (packet.size() < 7) {
+    return;  // size(1) + tag(1) + id(1) + value(4)
+  }
+
+  uint8_t encoderId = packet[2];
+
+  packet = packet.subspan(3);  // Skip past the size and tag and ID
+  int32_t value =
+      static_cast<int32_t>(wpi::support::endian::read32be(&packet[0]));
+  double value01 = ((double)value-90.0)/450000.0;  // needs to be in 0-1
+
+  // Look up the registered encoders
+  if (m_dutycycleencoder_channel_map.count(encoderId) == 0) {
+    return;
+  }
+
+  uint8_t wpilibEncoderChannel = m_dutycycleencoder_channel_map[encoderId];
+  //wpi::print("DutyCycle{} {} {}\n", wpilibEncoderChannel, value01, value);
+
+  wpi::json encJson;
+  encJson["type"] = "DutyCycle";
+  encJson["device"] = "DutyCycleEncoder["+std::to_string(wpilibEncoderChannel)+"]";
+  encJson["data"] = {{">Position", value01}, {">Connected", true}};
 
   m_wpilib_update_func(encJson);
 }

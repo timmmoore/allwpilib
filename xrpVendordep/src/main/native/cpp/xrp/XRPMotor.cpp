@@ -9,7 +9,7 @@
 using namespace frc;
 
 std::map<int, std::string> XRPMotor::s_simDeviceMap = {
-    {0, "motorL"}, {1, "motorR"}, {2, "motor3"}, {3, "motor4"}};
+    {0, "motorL"}, {1, "motorR"}, {2, "motor3"}, {3, "motor4"}, {4, "motor5"}, {5, "motor6"}, {6, "motor7"}, {7, "motor8"}};
 
 std::set<int> XRPMotor::s_registeredDevices = {};
 
