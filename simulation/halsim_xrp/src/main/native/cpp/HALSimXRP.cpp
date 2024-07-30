@@ -119,6 +119,9 @@ void HALSimXRP::OnNetValueChanged(const wpi::json& msg) {
     if (provider) {
       provider->OnNetValueChanged(msg.at("data"));
     }
+    else {
+      wpi::print(stderr, "Provider not found: {}\n", key.str());
+    }
   } catch (wpi::json::exception& e) {
     wpi::print(stderr, "Error with incoming message: {}\n", e.what());
   }

@@ -55,19 +55,13 @@ void XRP::HandleWPILibUpdate(const wpi::json& data) {
     HandleGyroSimValueChanged(data);
   } else if (data["type"] == "Encoder") {
     HandleEncoderSimValueChanged(data);
-  } else if (data["type"] == "DutyCycle") {
-    //std::string s = data["device"].get<std::string>();
-    //std::string CycleData = data["data"].dump();
-    //wpi::print("XRP DutyCycle {} {}\n", s, CycleData);
   }
-/*
   else {
     std::string s = data["type"].get<std::string>();
     std::string s1 = data["device"].get<std::string>();
     std::string CycleData = data["data"].dump();
     wpi::print("XRP HandleUpdate {} {} {}\n", s, s1, CycleData);
   }
-*/
 }
 
 void XRP::HandleXRPUpdate(std::span<const uint8_t> packet) {
@@ -469,10 +463,19 @@ void XRP::ReadAnalogTag(std::span<const uint8_t> packet) {
   float voltage =
       wpi::bit_cast<float>(wpi::support::endian::read32be(&packet[0]));
 
+  wpi::print(stderr, "AI input voltage {} {}\n", analogId, voltage);
   wpi::json analogJson;
-  analogJson["type"] = "AI";
-  analogJson["device"] = std::to_string(analogId);
-  analogJson["data"] = {{">voltage", voltage}};
-
+  if(analogId != (uint8_t)3){
+    analogJson["type"] = "AI";
+    analogJson["device"] = std::to_string(analogId);
+    analogJson["data"] = {{">voltage", voltage}};
+  }
+  else {
+    analogJson["type"] = "RoboRIO";
+//    analogJson["device"] = std::to_string(analogId);
+    double dvolt = voltage;
+    analogJson["data"] = {{">vin_voltage", dvolt}};  
+    wpi::print(stderr, "XRP input voltage {} {}\n", analogId, dvolt);
+  }
   m_wpilib_update_func(analogJson);
 }

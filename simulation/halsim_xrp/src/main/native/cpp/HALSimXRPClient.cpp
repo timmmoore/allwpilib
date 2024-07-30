@@ -11,6 +11,7 @@
 #include <WSProvider_DriverStation.h>
 #include <WSProvider_Encoder.h>
 #include <WSProvider_HAL.h>
+#include <WSProvider_RoboRIO.h>
 #include <WSProvider_SimDevice.h>
 #include <wpinet/EventLoopRunner.h>
 
@@ -37,6 +38,7 @@ bool HALSimXRPClient::Initialize() {
     HALSimWSProviderDIO::Initialize(registerFunc);
     HALSimWSProviderDriverStation::Initialize(registerFunc);
     HALSimWSProviderEncoder::Initialize(registerFunc);
+    HALSimWSProviderRoboRIO::Initialize(registerFunc);
     HALSimWSProviderHAL::Initialize(registerFunc);
 
     simDevices.Initialize(loop);
