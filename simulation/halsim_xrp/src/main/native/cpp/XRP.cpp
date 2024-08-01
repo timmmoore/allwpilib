@@ -56,12 +56,6 @@ void XRP::HandleWPILibUpdate(const wpi::json& data) {
   } else if (data["type"] == "Encoder") {
     HandleEncoderSimValueChanged(data);
   }
-  else {
-    std::string s = data["type"].get<std::string>();
-    std::string s1 = data["device"].get<std::string>();
-    std::string CycleData = data["data"].dump();
-    wpi::print("XRP HandleUpdate {} {} {}\n", s, s1, CycleData);
-  }
 }
 
 void XRP::HandleXRPUpdate(std::span<const uint8_t> packet) {
@@ -432,9 +426,7 @@ void XRP::ReadDutyCycleEncoderTag(std::span<const uint8_t> packet) {
   uint8_t encoderId = packet[2];
 
   packet = packet.subspan(3);  // Skip past the size and tag and ID
-  int32_t value =
-      static_cast<int32_t>(wpi::support::endian::read32be(&packet[0]));
-  double value01 = ((double)value-90.0)/450000.0;  // needs to be in 0-1
+  double value01 = wpi::bit_cast<float>(wpi::support::endian::read32be(&packet[0]));
 
   // Look up the registered encoders
   if (m_dutycycleencoder_channel_map.count(encoderId) == 0) {
@@ -442,7 +434,6 @@ void XRP::ReadDutyCycleEncoderTag(std::span<const uint8_t> packet) {
   }
 
   uint8_t wpilibEncoderChannel = m_dutycycleencoder_channel_map[encoderId];
-  //wpi::print("DutyCycle{} {} {}\n", wpilibEncoderChannel, value01, value);
 
   wpi::json encJson;
   encJson["type"] = "DutyCycle";
@@ -463,7 +454,6 @@ void XRP::ReadAnalogTag(std::span<const uint8_t> packet) {
   float voltage =
       wpi::bit_cast<float>(wpi::support::endian::read32be(&packet[0]));
 
-  wpi::print(stderr, "AI input voltage {} {}\n", analogId, voltage);
   wpi::json analogJson;
   if(analogId != (uint8_t)3){
     analogJson["type"] = "AI";
@@ -472,10 +462,9 @@ void XRP::ReadAnalogTag(std::span<const uint8_t> packet) {
   }
   else {
     analogJson["type"] = "RoboRIO";
-//    analogJson["device"] = std::to_string(analogId);
+    analogJson["device"] = std::string("");
     double dvolt = voltage;
     analogJson["data"] = {{">vin_voltage", dvolt}};  
-    wpi::print(stderr, "XRP input voltage {} {}\n", analogId, dvolt);
   }
   m_wpilib_update_func(analogJson);
 }
